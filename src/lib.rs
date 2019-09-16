@@ -731,6 +731,7 @@ impl<'a> MaybeStaticStr<'a> {
 /// [`target()`]: struct.Record.html#method.target
 #[derive(Clone, Debug)]
 pub struct Record<'a> {
+    id: Option<&'a str>,
     metadata: Metadata<'a>,
     args: fmt::Arguments<'a>,
     module_path: Option<MaybeStaticStr<'a>>,
@@ -768,6 +769,12 @@ impl<'a> Record<'a> {
     #[inline]
     pub fn args(&self) -> &fmt::Arguments<'a> {
         &self.args
+    }
+
+    /// id of log
+    #[inline]
+    pub fn id(&self) -> Option<&'a str> {
+        self.id
     }
 
     /// Metadata about the log directive.
@@ -926,6 +933,7 @@ impl<'a> RecordBuilder<'a> {
         #[cfg(not(feature = "kv_unstable"))]
         return RecordBuilder {
             record: Record {
+                id: None,
                 args: format_args!(""),
                 metadata: Metadata::builder().build(),
                 module_path: None,
@@ -939,6 +947,13 @@ impl<'a> RecordBuilder<'a> {
     #[inline]
     pub fn args(&mut self, args: fmt::Arguments<'a>) -> &mut RecordBuilder<'a> {
         self.record.args = args;
+        self
+    }
+
+    /// Set id
+    #[inline]
+    pub fn id(&mut self, id: Option<&'a str>) -> &mut RecordBuilder<'a> {
+        self.record.id = id;
         self
     }
 
@@ -1385,12 +1400,14 @@ pub fn logger() -> &'static Log {
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
 pub fn __private_api_log(
+    id: Option<&str>,
     args: fmt::Arguments,
     level: Level,
     &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
 ) {
     logger().log(
         &Record::builder()
+            .id(id)
             .args(args)
             .level(level)
             .target(target)

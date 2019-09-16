@@ -29,10 +29,23 @@
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! log {
+    (id: $id:expr, target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
+        let lvl = $lvl;
+        if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
+            $crate::__private_api_log(
+                Some($id),
+                __log_format_args!($($arg)+),
+                lvl,
+                &($target, __log_module_path!(), __log_file!(), __log_line!()),
+            );
+        }
+    });
+    (id: $id:expr, $lvl:expr, $($arg:tt)+) => (log!(id: $id, target: __log_module_path!(), $lvl, $($arg)+));
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api_log(
+                None,
                 __log_format_args!($($arg)+),
                 lvl,
                 &($target, __log_module_path!(), __log_file!(), __log_line!()),
@@ -58,6 +71,12 @@ macro_rules! log {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! error {
+    (id: $id:expr, target: $target:expr, $($arg:tt)+) => (
+        log!(id: $id, target: $target, $crate::Level::Error, $($arg)+);
+    );
+    (id: $id:expr, $($arg:tt)+) => (
+        log!(id: $id, $crate::Level::Error, $($arg)+);
+    );
     (target: $target:expr, $($arg:tt)+) => (
         log!(target: $target, $crate::Level::Error, $($arg)+);
     );
@@ -82,6 +101,12 @@ macro_rules! error {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! warn {
+    (id: $id:expr, target: $target:expr, $($arg:tt)+) => (
+        log!(id: $id, target: $target, $crate::Level::Warn, $($arg)+);
+    );
+    (id: $id:expr, $($arg:tt)+) => (
+        log!(id: $id, $crate::Level::Warn, $($arg)+);
+    );
     (target: $target:expr, $($arg:tt)+) => (
         log!(target: $target, $crate::Level::Warn, $($arg)+);
     );
@@ -108,6 +133,12 @@ macro_rules! warn {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! info {
+    (id: $id:expr, target: $target:expr, $($arg:tt)+) => (
+        log!(id: $id, target: $target, $crate::Level::Info, $($arg)+);
+    );
+    (id: $id:expr, $($arg:tt)+) => (
+        log!(id: $id, $crate::Level::Info, $($arg)+);
+    );
     (target: $target:expr, $($arg:tt)+) => (
         log!(target: $target, $crate::Level::Info, $($arg)+);
     );
@@ -133,6 +164,12 @@ macro_rules! info {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! debug {
+    (id: $id:expr, target: $target:expr, $($arg:tt)+) => (
+        log!(id: $id, target: $target, $crate::Level::Debug, $($arg)+);
+    );
+    (id: $id:expr, $($arg:tt)+) => (
+        log!(id: $id, $crate::Level::Debug, $($arg)+);
+    );
     (target: $target:expr, $($arg:tt)+) => (
         log!(target: $target, $crate::Level::Debug, $($arg)+);
     );
@@ -160,6 +197,12 @@ macro_rules! debug {
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! trace {
+    (id: $id:expr, target: $target:expr, $($arg:tt)+) => (
+        log!(id: $id, target: $target, $crate::Level::Trace, $($arg)+);
+    );
+    (id: $id:expr, $($arg:tt)+) => (
+        log!(id: $id, $crate::Level::Trace, $($arg)+);
+    );
     (target: $target:expr, $($arg:tt)+) => (
         log!(target: $target, $crate::Level::Trace, $($arg)+);
     );
