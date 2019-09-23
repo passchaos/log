@@ -732,6 +732,7 @@ impl<'a> MaybeStaticStr<'a> {
 #[derive(Clone, Debug)]
 pub struct Record<'a> {
     id: Option<&'a str>,
+    tag: Option<&'a str>,
     metadata: Metadata<'a>,
     args: fmt::Arguments<'a>,
     module_path: Option<MaybeStaticStr<'a>>,
@@ -775,6 +776,12 @@ impl<'a> Record<'a> {
     #[inline]
     pub fn id(&self) -> Option<&'a str> {
         self.id
+    }
+
+    /// tag of log
+    #[inline]
+    pub fn tag(&self) -> Option<&'a str> {
+        self.tag
     }
 
     /// Metadata about the log directive.
@@ -921,6 +928,8 @@ impl<'a> RecordBuilder<'a> {
         #[cfg(feature = "kv_unstable")]
         return RecordBuilder {
             record: Record {
+                id: None,
+                tag: None,
                 args: format_args!(""),
                 metadata: Metadata::builder().build(),
                 module_path: None,
@@ -934,6 +943,7 @@ impl<'a> RecordBuilder<'a> {
         return RecordBuilder {
             record: Record {
                 id: None,
+                tag: None,
                 args: format_args!(""),
                 metadata: Metadata::builder().build(),
                 module_path: None,
@@ -954,6 +964,13 @@ impl<'a> RecordBuilder<'a> {
     #[inline]
     pub fn id(&mut self, id: Option<&'a str>) -> &mut RecordBuilder<'a> {
         self.record.id = id;
+        self
+    }
+
+    /// Set tag
+    #[inline]
+    pub fn tag(&mut self, tag: Option<&'a str>) -> &mut RecordBuilder<'a> {
+        self.record.tag = tag;
         self
     }
 
@@ -1397,10 +1414,28 @@ pub fn logger() -> &'static Log {
     }
 }
 
+#[doc(hidden)]
+pub fn __inner_log(id: Option<&'static str>,
+             tag: Option<&'static str>,
+             args: std::fmt::Arguments,
+             level: crate::Level,
+             target: &str) {
+    if level <= crate::STATIC_MAX_LEVEL && level <= crate::max_level() {
+        crate::__private_api_log(
+            id,
+            tag,
+            args,
+            level,
+            &(target, crate::__log_module_path!(), crate::__log_file!(), crate::__log_line!()),
+        );
+    }
+}
+
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
 pub fn __private_api_log(
     id: Option<&str>,
+    tag: Option<&str>,
     args: fmt::Arguments,
     level: Level,
     &(target, module_path, file, line): &(&str, &'static str, &'static str, u32),
@@ -1408,6 +1443,7 @@ pub fn __private_api_log(
     logger().log(
         &Record::builder()
             .id(id)
+            .tag(tag)
             .args(args)
             .level(level)
             .target(target)
@@ -1516,6 +1552,55 @@ mod tests {
     fn test_level_show() {
         assert_eq!("INFO", Level::Info.to_string());
         assert_eq!("ERROR", Level::Error.to_string());
+    }
+
+    #[test]
+    fn test_log_extension() {
+        struct SimpleLogger;
+
+        impl crate::Log for SimpleLogger {
+            fn enabled(&self, _metadata: &crate::Metadata) -> bool {
+                true
+            }
+
+            fn log(&self, record: &crate::Record) {
+                if self.enabled(record.metadata()) {
+                    println!("id= {:?} tags= {:?} target= {} level= {} content= {}", record.id(), record.tags(), record.target(), record.level(), record.args);
+                }
+            }
+
+            fn flush(&self) {}
+        }
+
+        static LOGGER: SimpleLogger = SimpleLogger;
+
+        crate::set_logger(&LOGGER).unwrap();
+        crate::set_max_level(LevelFilter::Trace);
+
+        crate::log!(id: "dsddf", tags: ["1232", "3123"], target: "sdf", Level::Error, "sdadfasdf");
+        crate::error!(id: "dsddf", tags: ["1232", "3123"], target: "sdf", "sdadfasdf");
+        crate::warn!(id: "dsddf", tags: ["1232", "3123"], target: "sdf", "sdadfasdf");
+        crate::info!(id: "dsddf", tags: ["1232", "3123"], target: "sdf", "sdadfasdf");
+        crate::debug!(id: "dsddf", tags: ["1232", "3123"], target: "sdf", "sdadfasdf");
+        crate::trace!(id: "dsddf", tags: ["1232", "3123"], target: "sdf", "sdadfasdf");
+
+        crate::error!(id: "dsddf", tags: ["1232", "3123"], "sdadfasdf");
+        crate::warn!(id: "dsddf", tags: ["1232", "3123"], "sdadfasdf");
+        crate::info!(id: "dsddf", tags: ["1232", "3123"],  "sdadfasdf");
+        crate::debug!(id: "dsddf", tags: ["1232", "3123"], "sdadfasdf");
+        crate::trace!(id: "dsddf", tags: ["1232", "3123"], "sdadfasdf");
+
+        crate::error!(id: "sdf", "sdfasdfasd");
+        crate::info!(id: "sdf", "sdfasdfasd");
+        crate::warn!(id: "sdf", "sdfasdfasd");
+        crate::debug!(id: "sdf", "sdfasdfasd");
+        crate::trace!(id: "sdf", "sdfasdfasd");
+
+        crate::error!(id: "sdf", target: "sdsdf", "sdfasdfasd");
+        crate::info!(id: "sdf", target: "sdsdf", "sdfasdfasd");
+        crate::warn!(id: "sdf", target: "sdsdf", "sdfasdfasd");
+        crate::debug!(id: "sdf", target: "sdsdf", "sdfasdfasd");
+        crate::trace!(id: "sdf", target: "sdsdf", "sdfasdfasd");
     }
 
     #[test]
