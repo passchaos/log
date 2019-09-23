@@ -29,19 +29,34 @@
 /// ```
 
 #[macro_export(local_inner_macros)]
+macro_rules! __inner_log {
+    ($id:expr, $tag:expr, $args:expr, $level:expr, $target:expr) => {
+        if $level <= $crate::STATIC_MAX_LEVEL && $level <= $crate::max_level() {
+            $crate::__private_api_log(
+                $id,
+                $tag,
+                $args,
+                $level,
+                &($target, __log_module_path!(), __log_file!(), __log_line!()),
+            );
+        }
+    }
+}
+
+#[macro_export(local_inner_macros)]
 macro_rules! log {
     (id: $id:expr, tags: [$($tags:tt)+], target: $target:expr, $lvl:expr, $($arg:tt)+) => (
-        $crate::__inner_log(Some($id), Some(__log_concat!($($tags)+)), __log_format_args!($($arg)+), $lvl, $target);
+        __inner_log!(Some($id), Some(__log_concat!($($tags)+)), __log_format_args!($($arg)+), $lvl, $target);
     );
     (id: $id:expr, tags: [$($tags:tt)+], $lvl:expr, $($arg:tt)+) => ({
         log!(id: $id, tags: [$($tags)+], target: __log_module_path!(), $lvl, $($arg)+);
     });
     (id: $id:expr, target: $target:expr, $lvl:expr, $($arg:tt)+) => ({
-        $crate::__inner_log(Some($id), None, __log_format_args!($($arg)+), $lvl, $target);
+        __inner_log!(Some($id), None, __log_format_args!($($arg)+), $lvl, $target);
     });
     (id: $id:expr, $lvl:expr, $($arg:tt)+) => (log!(id: $id, target: __log_module_path!(), $lvl, $($arg)+));
     (target: $target:expr, $lvl:expr, $($arg:tt)+) => (
-        $crate::__inner_log(None, None, __log_format_args!($($arg)+), $lvl, $target);
+        __inner_log!(None, None, __log_format_args!($($arg)+), $lvl, $target);
     );
     ($lvl:expr, $($arg:tt)+) => (log!(target: __log_module_path!(), $lvl, $($arg)+))
 }

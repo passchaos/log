@@ -1414,23 +1414,6 @@ pub fn logger() -> &'static Log {
     }
 }
 
-#[doc(hidden)]
-pub fn __inner_log(id: Option<&'static str>,
-             tag: Option<&'static str>,
-             args: std::fmt::Arguments,
-             level: crate::Level,
-             target: &str) {
-    if level <= crate::STATIC_MAX_LEVEL && level <= crate::max_level() {
-        crate::__private_api_log(
-            id,
-            tag,
-            args,
-            level,
-            &(target, crate::__log_module_path!(), crate::__log_file!(), crate::__log_line!()),
-        );
-    }
-}
-
 // WARNING: this is not part of the crate's public API and is subject to change at any time
 #[doc(hidden)]
 pub fn __private_api_log(
